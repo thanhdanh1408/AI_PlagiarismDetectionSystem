@@ -42,14 +42,19 @@ class TFIDFEngine:
 
 
 class EmbeddingEngine:
-    """Sentence Embedding + Cosine Similarity"""
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+    """Sentence Embedding + Cosine Similarity (Đã tối ưu cho Tiếng Việt)"""
+    def __init__(self, model_name='keepitreal/vietnamese-sbert'):
         self.model = None
         self.model_name = model_name
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(self.model_name)
-            print(f"[OK] Model loaded: {self.model_name}")
+            import torch
+            
+            # Tự động chọn GPU nếu có, ngược lại dùng CPU
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            
+            self.model = SentenceTransformer(self.model_name, device=device)
+            print(f"[OK] Model loaded: {self.model_name} on {device.upper()}")
         except Exception as e:
             print(f"[WARN] Cannot load embedding model: {e}")
 
@@ -60,7 +65,8 @@ class EmbeddingEngine:
             e1 = self.model.encode(text1, convert_to_tensor=True)
             e2 = self.model.encode(text2, convert_to_tensor=True)
             return float(max(0.0, min(1.0, util.cos_sim(e1, e2).item())))
-        except:
+        except Exception as e:
+            print(f"[ERROR] compute_similarity error: {e}")
             return 0.0
 
     def compute_sentence_similarities(self, sents1, sents2):
@@ -71,7 +77,8 @@ class EmbeddingEngine:
             e1 = self.model.encode(sents1, convert_to_tensor=True)
             e2 = self.model.encode(sents2, convert_to_tensor=True)
             return util.cos_sim(e1, e2).cpu().numpy()
-        except:
+        except Exception as e:
+            print(f"[ERROR] compute_sentence_similarities error: {e}")
             return np.zeros((len(sents1), len(sents2)))
 
 
